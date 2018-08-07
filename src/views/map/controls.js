@@ -11,17 +11,18 @@ const lastMoveDirection = observable(null)
 
 const handleMove = action((direction) => {
   const speedCoeff = settings.speedLimit.get()
+  const jitter = random(0.000003, -0.000003, true)
   const move = (direction === 'UP' || direction === 'DOWN') ?
-    random(0.0000300, 0.000070, true) / speedCoeff :
-    random(0.0000700, 0.000070, true) / speedCoeff
+    random(0.0000200, 0.000070, true) / speedCoeff :
+    random(0.0000600, 0.000070, true) / speedCoeff
 
   let newLocation
   switch (direction) {
-  case 'LEFT': { newLocation = [ userLocation[0], userLocation[1] - move ]; break }
-  case 'RIGHT': { newLocation = [ userLocation[0], userLocation[1] + move ]; break }
-  case 'DOWN': { newLocation = [ userLocation[0] - move, userLocation[1] ]; break }
-  case 'UP': { newLocation = [ userLocation[0] + move, userLocation[1] ]; break }
-  default: { newLocation = [ userLocation[0], userLocation[1] ] }
+  case 'LEFT': { newLocation = [ userLocation[0] + jitter, userLocation[1] - move ]; break }
+  case 'RIGHT': { newLocation = [ userLocation[0] + jitter, userLocation[1] + move ]; break }
+  case 'DOWN': { newLocation = [ userLocation[0] - move, userLocation[1] + jitter ]; break }
+  case 'UP': { newLocation = [ userLocation[0] + move, userLocation[1] + jitter ]; break }
+  default: { newLocation = [ userLocation[0] + jitter, userLocation[1] + jitter ] }
   }
 
   userLocation.replace(newLocation)
