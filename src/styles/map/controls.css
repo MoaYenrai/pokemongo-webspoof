@@ -22,29 +22,51 @@
       animation: lastMove 300ms ease;
     }
 
-    &.octicon-arrow-up {
-      top: 0;
+    &.control-arrow-n {
+      top: -5px;
       left: 38px;
     }
-
-    &.octicon-arrow-up {
-      top: 0;
-      left: 38px;
+    
+    &.control-arrow-w {
+       transform: rotate(0.75turn);
+       top: 32px;
+       left: 3px;
     }
 
-    &.octicon-arrow-left {
-      top: 32px;
-      left: 10px;
+    &.control-arrow-e {
+       transform: rotate(0.25turn);
+       top: 32px;
+       left: 75px;
     }
 
-    &.octicon-arrow-right {
-      top: 32px;
-      left: 66px;
+    &.control-arrow-s {
+       transform: rotate(0.5turn);
+       top: 70px;
+       left: 38px;
     }
 
-    &.octicon-arrow-down {
-      top: 66px;
-      left: 38px;
-    }
+    &.control-arrow-ne {
+       transform: rotate(0.125turn);
+       top: -9px;
+       left: 80px;
+     }
+     
+    &.control-arrow-es {
+       transform: rotate(0.375turn);
+       top: 75px;
+       left: 80px;
+     }
+     
+    &.control-arrow-sw {
+       transform: rotate(0.625turn);
+       top: 75px;
+       left: 0;
+     }
+     
+    &.control-arrow-wn {
+       transform: rotate(0.875turn);
+       top: -8px;
+       left: -1px;
+     }
   }
 }
