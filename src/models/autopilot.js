@@ -147,7 +147,8 @@ class Autopilot {
 
         // move on to the next location
         if (this.steps.length !== 0) {
-          this.timeout = setTimeout(moveNextPoint, 1000)
+          const randomTimeout = random(950, 1900, true)
+          this.timeout = setTimeout(moveNextPoint, randomTimeout)
         } else {
           this.stop()
         }
