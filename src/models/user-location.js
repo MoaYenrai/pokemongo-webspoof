@@ -40,10 +40,11 @@ const updateXcodeLocation = throttle(([ lat, lng ]) => {
   // track location changes for total distance & average speed
   stats.pushMove(lat, lng)
 
-  const jitter = settings.addJitterToMoves.get() ? random(-0.000009, 0.000009, true) : 0
+  const latJitter = settings.addJitterToMoves.get() ? random(-0.000015, 0.000015, true) : 0
+  const lngJitter = settings.addJitterToMoves.get() ? random(-0.000015, 0.000015, true) : 0
 
   const xcodeLocationData =
-    `<gpx creator="Xcode" version="1.1"><wpt lat="${(lat + jitter).toFixed(6)}" lon="${(lng + jitter).toFixed(6)}"><name>PokemonLocation</name></wpt></gpx>`
+    `<gpx creator="Xcode" version="1.1"><wpt lat="${(lat + latJitter).toFixed(6)}" lon="${(lng + lngJitter).toFixed(6)}"><name>PokemonLocation</name></wpt></gpx>`
 
   // write `pokemonLocation.gpx` file fro xcode spoof location
   const filePath = resolve(remote.getGlobal('tmpProjectPath'), 'pokemonLocation.gpx')
