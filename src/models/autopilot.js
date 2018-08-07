@@ -1,4 +1,4 @@
-import { times } from 'lodash'
+import { random, times } from 'lodash'
 import { action, observable, computed } from 'mobx'
 import haversine from 'haversine'
 import Alert from 'react-s-alert'
