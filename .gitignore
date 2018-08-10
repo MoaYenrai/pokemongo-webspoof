@@ -70,3 +70,5 @@ iOSInjectionProject/
 # IntelliJ
 .idea
 *.iml
+
+config/here.js

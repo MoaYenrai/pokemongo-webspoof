@@ -18,12 +18,13 @@ import TotalDistance from './total-distance.js'
 import Autopilot from './autopilot.js'
 import Pokeball from './pokeball.js'
 
-import MapsApi from '../../config/api.js'
+import HereApi from '../../config/here.js'
 
 @observer
 class Map extends Component {
 
   map = null
+  marker = null
 
   @observable mapOptions = {
     keyboardShortcuts: false,
@@ -39,6 +40,41 @@ class Map extends Component {
         { enableHighAccuracy: true, maximumAge: 0 }
       )
     }
+  }
+
+  componentDidMount()  {
+    const [ latitude, longitude ] = userLocation
+    const platform = new H.service.Platform({
+      app_id: HereApi.appId,
+      app_code: HereApi.appCode,
+      useHTTPS: true
+    });
+    const defaultLayers = platform.createDefaultLayers({
+      tileSize: 256,
+      ppi: undefined
+    });
+    const mapContainer = document.getElementById('map')
+    const map = new H.Map(mapContainer,
+      defaultLayers.normal.map,{
+        center: {lat:52.5160, lng:13.3779},
+        zoom: 13
+      });
+    this.map = map
+    const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map))
+    const ui = H.ui.UI.createDefault(map, defaultLayers)
+    this.marker = new H.map.Marker({lat:latitude, lng:longitude})
+    map.addObject(this.marker);
+
+    const that = this;
+    map.addEventListener('tap', function (evt) {
+      const coord = map.screenToGeo(evt.currentPointer.viewportX, evt.currentPointer.viewportY)
+      const lat = coord.lat.toFixed(6)
+      const lng = coord.lng.toFixed(6)
+
+      that.suggestionChange(lat, lng)
+    })
+
+
   }
 
   // geolocation API might be down, use http://ipinfo.io
@@ -68,35 +104,28 @@ class Map extends Component {
 
   @action toggleMapDrag = () => {
     this.mapOptions.draggable = !this.mapOptions.draggable
-    this.map.map_.setOptions(toJS(this.mapOptions))
+    map.draggable = this.mapOptions.draggable
   }
 
-  @action handleClick = ({ lat, lng }, force) => {
-    if (!this.mapOptions.draggable || force) {
-      this.autopilot.handleSuggestionChange({ suggestion: { latlng: { lat, lng } } })
-    }
+  @action suggestionChange = (lat, lng) => {
+      this.autopilot.handleSuggestionChange({suggestion: {latlng: {lat, lng}}})
   }
 
   render() {
     const [ latitude, longitude ] = userLocation
+    if (this.marker) {
+      this.marker.setPosition({lat:latitude, lng:longitude})
+      this.map.setCenter({lat:latitude, lng:longitude})
+    }
 
     return (
       <div className='google-map-container'>
         { /* only display google map when user geolocated */ }
-        { (latitude && longitude) ?
-          <GoogleMap
-            ref={ (ref) => { this.map = ref } }
-            zoom={ settings.zoom.get() }
-            center={ [ latitude, longitude ] }
-            onClick={ this.handleClick }
-            options={ () => this.mapOptions }
-            onGoogleApiLoaded={ this.handleGoogleMapLoaded }
-            yesIWantToUseGoogleMapApiInternals={ true }
-            apiKey={ MapsApi.apiKey }>
+          <div id="map" style={ {position:'absolute', width:'100%', height:'100%', background:'grey'}} >
 
             { /* userlocation center */ }
-            <Pokeball lat={ userLocation[0] } lng={ userLocation[1] } />
-          </GoogleMap> :
+          </div>
+        { !(latitude && longitude) ?
           <div
             style={ {
               position: 'absolute',
@@ -108,7 +137,7 @@ class Map extends Component {
               style={ { marginBottom: 10 } }
               className='fa fa-spin fa-2x fa-refresh' />
             <div>Loading user location & map...</div>
-          </div> }
+          </div> : <div></div> }
 
         <div className='btn btn-drag-map'>
           { this.mapOptions.draggable ?

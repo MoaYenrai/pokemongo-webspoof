@@ -1,9 +1,10 @@
-import { random, times } from 'lodash'
+import { split, map, random, times } from 'lodash'
 import { action, observable, computed } from 'mobx'
 import haversine from 'haversine'
 import Alert from 'react-s-alert'
 
 import userLocation from './user-location.js'
+import HereApi from "../config/here";
 
 class Autopilot {
 
@@ -47,29 +48,44 @@ class Autopilot {
   }
 
   findDirectionPath = (lat, lng) => new Promise((resolve, reject) => {
-    const { google: { maps } } = window
+    const platform = new H.service.Platform({
+      app_id: HereApi.appId,
+      app_code: HereApi.appCode,
+      useHTTPS: true
+    });
     this.destination = { lat, lng }
 
-    // prepare `directionsRequest` to google map
-    const directionsService = new maps.DirectionsService()
-    const directionsRequest = {
-      origin: { lat: userLocation[0], lng: userLocation[1] },
-      destination: this.destination,
-      travelMode: maps.TravelMode.WALKING,
-      unitSystem: maps.UnitSystem.METRIC
-    }
+    var router = platform.getRoutingService(),
+      routeRequestParams = {
+        mode: 'shortest;pedestrian',
+        representation: 'turnByTurn',
+        waypoint0: userLocation[0] + ',' + userLocation[1],
+        waypoint1: lat +',' + lng,
+        routeattributes: 'summary,legs',
+        maneuverattributes: 'direction,action',
+        legAttributes: 'waypoint,shape',
+        metricSystem: 'metric'
+      };
 
-    // ask google map to find a route
-    directionsService.route(directionsRequest, (response, status) => {
-      if (status === maps.DirectionsStatus.OK) {
-        const { routes: [ { overview_path } ] } = response
-        this.rawOverviewPath = overview_path
-        return resolve(overview_path)
+
+    const that = this
+    router.calculateRoute(
+      routeRequestParams,
+      function onSuccess(result) {
+        var route = result.response.route[0]
+        console.log(route)
+        if (route) {
+          that.rawOverviewPath = map(route.leg[0].shape, (coord) => { return {lat:Number(split(coord, ',')[0]), lng: Number(split(coord, ',')[1])} } )
+          return resolve(that.rawOverviewPath)
+        }
+      },
+      function(error) {
+        that.rawOverviewPath = null
+        console.error(error)
+        return reject(that.rawOverviewPath)
       }
+    );
 
-      this.rawOverviewPath = null
-      return reject(status)
-    })
   })
 
   calculateIntermediateSteps = (foundPath) =>
@@ -79,28 +95,28 @@ class Autopilot {
           const { lat: startLat, lng: startLng } = foundPath[idx - 1]
 
           const pendingDistance = haversine(
-            { latitude: startLat(), longitude: startLng() },
-            { latitude: endLat(), longitude: endLng() }
+            { latitude: startLat, longitude: startLng },
+            { latitude: endLat, longitude: endLng }
           )
 
           if (isNaN(this.speed)) {
             return {
               distance: result.distance + pendingDistance,
-              steps: [ { lat: endLat(), lng: endLng() } ]
+              steps: [ { lat: endLat, lng: endLng } ]
             }
           }
 
           // 0.0025 ~= 2,5m/s ~= 9 km/h
           const splitInto = (pendingDistance / this.speed).toFixed()
 
-          const latSteps = (Math.abs(startLat() - endLat())) / splitInto
-          const lngSteps = (Math.abs(startLng() - endLng())) / splitInto
+          const latSteps = (Math.abs(startLat - endLat)) / splitInto
+          const lngSteps = (Math.abs(startLng - endLng)) / splitInto
 
           const stepsInBetween = times(splitInto, (step) => {
-            const calculatedLat = (startLat() > endLat()) ?
-              startLat() - (latSteps * step) : startLat() + (latSteps * step)
-            const calculatedLng = (startLng() > endLng()) ?
-              startLng() - (lngSteps * step) : startLng() + (lngSteps * step)
+            const calculatedLat = (startLat > endLat) ?
+              startLat - (latSteps * step) : startLat + (latSteps * step)
+            const calculatedLng = (startLng > endLng) ?
+              startLng - (lngSteps * step) : startLng + (lngSteps * step)
 
             return { lat: calculatedLat, lng: calculatedLng }
           })

@@ -46,6 +46,8 @@ const updateXcodeLocation = throttle(([ lat, lng ]) => {
   const xcodeLocationData =
     `<gpx creator="Xcode" version="1.1"><wpt lat="${(lat + latJitter).toFixed(6)}" lon="${(lng + lngJitter).toFixed(6)}"><name>PokemonLocation</name></wpt></gpx>`
 
+  console.log(xcodeLocationData)
+
   // write `pokemonLocation.gpx` file fro xcode spoof location
   const filePath = resolve(remote.getGlobal('tmpProjectPath'), 'pokemonLocation.gpx')
   writeFile(filePath, xcodeLocationData, async (error) => {
