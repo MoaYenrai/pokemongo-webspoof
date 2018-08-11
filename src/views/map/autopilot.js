@@ -58,10 +58,11 @@ class Autopilot extends Component {
     })
   }
 
-  @action handleSuggestionChange = ({ suggestion: { latlng: { lat, lng } } }) =>
-    autopilot.scheduleTrip(lat, lng)
+  @action handleSuggestionChange = (suggestion) => {
+    autopilot.scheduleTrip(suggestion)
       .then(() => { if (!this.isModalOpen) this.isModalOpen = true })
       .catch(() => this.placesAutocomplete.setVal(null))
+  }
 
   @action handleStartAutopilot = () => {
     // reset modal state
@@ -125,8 +126,7 @@ class Autopilot extends Component {
 
         { !autopilot.clean &&
           <div
-            className='edit btn btn-primary'
-            onClick={ this.handleChangeSpeed }>
+            className='edit btn btn-secondary'>
             <i className={ `fa fa-${this.travelModeIcon}` } />
           </div>
         }

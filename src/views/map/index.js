@@ -1,13 +1,12 @@
 import axios from 'axios'
 
-import React, { Component } from 'react'
-import GoogleMap from 'google-map-react'
-import { observable, action, toJS } from 'mobx'
-import { observer } from 'mobx-react'
+import React, {Component} from 'react'
+import {action, observable} from 'mobx'
+import {observer} from 'mobx-react'
 import Alert from 'react-s-alert'
+import {remove} from 'lodash'
 
 import userLocation from '../../models/user-location.js'
-import settings from '../../models/settings.js'
 
 import SpeedCounter from './speed-counter.js'
 import BooleanSettings from './boolean-settings.js'
@@ -16,7 +15,6 @@ import SpeedLimit from './speed-limit.js'
 import Controls from './controls.js'
 import TotalDistance from './total-distance.js'
 import Autopilot from './autopilot.js'
-import Pokeball from './pokeball.js'
 
 import HereApi from '../../config/here.js'
 
@@ -25,10 +23,11 @@ class Map extends Component {
 
   map = null
   marker = null
+  @observable waypoints = []
 
   @observable mapOptions = {
     keyboardShortcuts: false,
-    draggable: true
+    waypointMode: true
   }
 
   componentWillMount() {
@@ -62,7 +61,8 @@ class Map extends Component {
     this.map = map
     const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map))
     const ui = H.ui.UI.createDefault(map, defaultLayers)
-    this.marker = new H.map.Marker({lat:latitude, lng:longitude})
+    var icon = new H.map.Icon('pokeball.png', {size: {h:22,w:22}});
+    this.marker = new H.map.Marker({lat:latitude, lng:longitude},{icon:icon})
     map.addObject(this.marker);
 
     const that = this;
@@ -71,7 +71,11 @@ class Map extends Component {
       const lat = coord.lat.toFixed(6)
       const lng = coord.lng.toFixed(6)
 
-      that.suggestionChange(lat, lng)
+      if (!that.mapOptions.waypointMode) {
+        that.suggestionChange(lat, lng)
+      } else {
+        that.handleWaypoint(lat, lng, evt)
+      }
     })
 
 
@@ -102,13 +106,34 @@ class Map extends Component {
     userLocation.replace([ latitude, longitude ])
   }
 
-  @action toggleMapDrag = () => {
-    this.mapOptions.draggable = !this.mapOptions.draggable
-    map.draggable = this.mapOptions.draggable
+  @action toggleWaypointMode = () => {
+    this.mapOptions.waypointMode = !this.mapOptions.waypointMode
+    map.draggable = this.mapOptions.waypointMode
+  }
+
+  @action startWaypointRouting = () => {
+    if (this.waypoints.length > 0) {
+      this.autopilot.handleSuggestionChange({suggestions: this.waypoints})
+    }
   }
 
   @action suggestionChange = (lat, lng) => {
       this.autopilot.handleSuggestionChange({suggestion: {latlng: {lat, lng}}})
+  }
+
+
+
+  @action handleWaypoint = (lat, lng, evt) => {
+    if (evt && evt.target instanceof mapsjs.map.Marker) {
+      const wp = remove(this.waypoints, (e) => e.id === evt.target.getId())
+      if (wp.length > 0) {
+        this.map.removeObject(evt.target)
+      }
+    } else {
+      const mapWaypoint = new H.map.Marker({lat:lat, lng:lng})
+      const wp = {lat:lat, lng:lng, id: this.map.addObject(mapWaypoint).getId()};
+      this.waypoints.push(wp)
+    }
   }
 
   render() {
@@ -140,16 +165,33 @@ class Map extends Component {
           </div> : <div></div> }
 
         <div className='btn btn-drag-map'>
-          { this.mapOptions.draggable ?
+          { this.mapOptions.waypointMode ?
+            <div>
+              <div
+                style={{marginRight: '10px'}}
+                className='btn btn-sm btn-primary'
+                onClick={ this.toggleWaypointMode }>
+                Waypoints activated
+              </div>
+              {this.waypoints.length > 0 ?
+                <div
+                  className='btn btn-sm btn-primary'
+                  onClick={this.startWaypointRouting}>
+                  <i className='fa fa-play'/>
+                </div>
+                :
+                <div
+                  className='btn btn-sm btn-secondary'>
+                  <i className='fa fa-play'/>
+                </div>
+              }
+            </div>
+            :
             <div
-              className='btn btn-sm btn-primary'
-              onClick={ this.toggleMapDrag }>
-              Map draggable
-            </div> :
-            <div
+              style={{marginLeft: '10px'}}
               className='btn btn-sm btn-secondary'
-              onClick={ this.toggleMapDrag }>
-              Map locked
+              onClick={ this.toggleWaypointMode }>
+              Waypoints deactivated
             </div> }
         </div>
 

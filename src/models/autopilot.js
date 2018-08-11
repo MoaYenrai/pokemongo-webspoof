@@ -47,35 +47,53 @@ class Autopilot {
     }
   }
 
-  findDirectionPath = (lat, lng) => new Promise((resolve, reject) => {
+  findDirectionPath = (suggestion) => new Promise((resolve, reject) => {
+
     const platform = new H.service.Platform({
       app_id: HereApi.appId,
       app_code: HereApi.appCode,
       useHTTPS: true
     });
-    this.destination = { lat, lng }
 
-    var router = platform.getRoutingService(),
-      routeRequestParams = {
+    const router = platform.getRoutingService()
+    const routeRequestParams = {
         mode: 'shortest;pedestrian',
         representation: 'turnByTurn',
         waypoint0: userLocation[0] + ',' + userLocation[1],
-        waypoint1: lat +',' + lng,
         routeattributes: 'summary,legs',
         maneuverattributes: 'direction,action',
         legAttributes: 'waypoint,shape',
         metricSystem: 'metric'
       };
 
+    if (suggestion.suggestion) {
+      const lat = suggestion.suggestion.latlng.lat
+      const lng = suggestion.suggestion.latlng.lng
+      this.destination = { lat, lng }
+      routeRequestParams.waypoint1 = lat + ',' + lng
+    }
+    if (suggestion.suggestions) {
+      var i = 1
+      suggestion.suggestions.forEach(wp => {
+        const lat = wp.lat
+        const lng = wp.lng
+        this.destination = { lat, lng }
+        routeRequestParams['waypoint'+i] = lat + ',' + lng
+         i = ++i
+      })
+    }
 
     const that = this
     router.calculateRoute(
       routeRequestParams,
       function onSuccess(result) {
         var route = result.response.route[0]
-        console.log(route)
         if (route) {
-          that.rawOverviewPath = map(route.leg[0].shape, (coord) => { return {lat:Number(split(coord, ',')[0]), lng: Number(split(coord, ',')[1])} } )
+          const points = []
+          route.leg.forEach((leg) => {
+            points.push(...map(leg.shape, (coord) => { return {lat:Number(split(coord, ',')[0]), lng: Number(split(coord, ',')[1])} }))
+          })
+          that.rawOverviewPath = points
           return resolve(that.rawOverviewPath)
         }
       },
@@ -131,9 +149,9 @@ class Autopilot {
       { distance: 0, steps: [] }
     )
 
-  @action scheduleTrip = async (lat, lng) => {
+  @action scheduleTrip = async (suggestion) => {
     try {
-      const foundPath = await this.findDirectionPath(lat, lng)
+      const foundPath = await this.findDirectionPath(suggestion)
       const { distance } = this.calculateIntermediateSteps(foundPath)
 
       this.distance = distance
