@@ -4,7 +4,8 @@
 *   https://developers.google.com/maps/documentation/javascript/get-api-key
 */
 
-const MapsApi = {
-    apiKey: 'AIzaSyAdyrjjShdj9h-UqjJYGbKuYlHkaI6GkF8'
+const HereApi = {
+  appId: '<YOUR HERE APP ID>',
+  appCode: '<YOUR HERE APP CODE>'
 };
-export default MapsApi;
+export default HereApi;
