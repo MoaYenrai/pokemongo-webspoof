@@ -20,4 +20,11 @@
     bottom: 14px;
     right: 30px;
   }
+  
+  .places {
+    width: 300px;
+    position: relative;
+    left: 10px;
+    top: 9px;
+  }
 }

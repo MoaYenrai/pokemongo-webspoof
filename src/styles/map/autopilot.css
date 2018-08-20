@@ -1,7 +1,7 @@
 .autopilot {
   position: absolute;
   top: 10px;
-  left: 10px;
+  left: 320px;
 
   .algolia-places {
     width: 330px;
@@ -22,7 +22,7 @@
     box-shadow: 0 0 7px rgba(0, 0, 0, .3);
     display: none;
     position: absolute;
-    padding: 10px;
+    padding: 20px;
     top: calc(50vh - (420px / 2) - $navbar-height);
     left: calc(50vw - (600px / 2));
     width: 600px;
@@ -47,6 +47,11 @@
 
     button {
       margin-top: 20px;
+    }
+    
+    .card {
+      margin: 1px;
+      padding: 5px;
     }
   }
 

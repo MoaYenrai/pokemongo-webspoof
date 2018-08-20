@@ -3,7 +3,6 @@ import { capitalize } from 'lodash'
 import React, { Component } from 'react'
 import { action, observable, computed } from 'mobx'
 import { observer } from 'mobx-react'
-import places from 'places.js'
 import cx from 'classnames'
 
 import autopilot from '../../models/autopilot.js'
@@ -39,35 +38,15 @@ class Autopilot extends Component {
   }
 
   componentDidMount() {
-    // initialize algolia places input
-    this.placesAutocomplete = places({ container: this.placesEl })
-    this.placesAutocomplete.on('change', this.handleSuggestionChange)
 
-    window.addEventListener('keyup', ({ keyCode }) => {
-      if (keyCode === 27 && this.isModalOpen) {
-        this.handleCancelAutopilot()
-      }
-      // use the space bar to pause/start autopilot
-      if (keyCode === 32) {
-        if (autopilot.running && !autopilot.paused) {
-          autopilot.pause()
-        } else if (autopilot.paused) {
-          autopilot.start()
-        }
-      }
-    })
   }
 
   @action handleSuggestionChange = (suggestion) => {
     autopilot.scheduleTrip(suggestion)
       .then(() => { if (!this.isModalOpen) this.isModalOpen = true })
-      .catch(() => this.placesAutocomplete.setVal(null))
   }
 
   @action handleStartAutopilot = () => {
-    // reset modal state
-    this.placesAutocomplete.setVal(null)
-
     // TODO: Refactor it's ugly
     // update `autopilot` data
     autopilot.steps = JSON.parse(JSON.stringify(autopilot.accurateSteps))
@@ -77,8 +56,6 @@ class Autopilot extends Component {
   }
 
   @action handleCancelAutopilot = () => {
-    // reset modal state
-    this.placesAutocomplete.setVal(null)
     this.isModalOpen = false
   }
 
@@ -130,10 +107,6 @@ class Autopilot extends Component {
             <i className={ `fa fa-${this.travelModeIcon}` } />
           </div>
         }
-
-        <div className={ cx('algolia-places', { hide: !autopilot.clean }) }>
-          <input ref={ (ref) => { this.placesEl = ref } } type='search' placeholder='Destination' />
-        </div>
 
         { !autopilot.clean &&
           <div
@@ -199,7 +172,7 @@ class Autopilot extends Component {
                 Cancel
               </button>
             </div>
-            <div className='col-xs-10'>
+            <div className='col-xs-9'>
               <button
                 type='button'
                 className='btn btn-block btn-sm btn-success'

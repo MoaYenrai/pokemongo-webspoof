@@ -17,6 +17,8 @@ import TotalDistance from './total-distance.js'
 import Autopilot from './autopilot.js'
 
 import HereApi from '../../config/here.js'
+import autopilot from "../../models/autopilot";
+import places from "places.js";
 
 @observer
 class Map extends Component {
@@ -59,10 +61,13 @@ class Map extends Component {
         zoom: 13
       });
     this.map = map
+
     const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map))
     const ui = H.ui.UI.createDefault(map, defaultLayers)
+
     var icon = new H.map.Icon('pokeball.png', {size: {h:22,w:22}});
     this.marker = new H.map.Marker({lat:latitude, lng:longitude},{icon:icon})
+
     map.addObject(this.marker);
 
     const that = this;
@@ -78,7 +83,20 @@ class Map extends Component {
       }
     })
 
+    // initialize algolia places input
+    this.placesAutocomplete = places({ container: this.placesEl })
+    this.placesAutocomplete.on('change', this.placesChange)
 
+    window.addEventListener('keyup', ({ keyCode }) => {
+      // use the space bar to pause/start autopilot
+      if (keyCode === 32) {
+        if (autopilot.running && !autopilot.paused) {
+          this.autopilot.pause()
+        } else if (autopilot.paused) {
+          this.autopilot.start()
+        }
+      }
+    })
   }
 
   // geolocation API might be down, use http://ipinfo.io
@@ -104,6 +122,7 @@ class Map extends Component {
 
   @action handleGeolocationSuccess({ coords: { latitude, longitude } }) {
     userLocation.replace([ latitude, longitude ])
+    this.map.setCenter({lat:latitude, lng:longitude})
   }
 
   @action toggleWaypointMode = () => {
@@ -117,11 +136,16 @@ class Map extends Component {
     }
   }
 
-  @action suggestionChange = (lat, lng) => {
-      this.autopilot.handleSuggestionChange({suggestion: {latlng: {lat, lng}}})
+  @action placesChange = suggestion => {
+    this.placesAutocomplete.setVal(null)
+    this.map.setCenter({lat:suggestion.suggestion.latlng.lat, lng:suggestion.suggestion.latlng.lng})
+    this.autopilot.handleSuggestionChange(suggestion)
   }
 
-
+  @action suggestionChange = (lat, lng) => {
+      this.placesAutocomplete.setVal(null)
+      this.autopilot.handleSuggestionChange({suggestion: {latlng: {lat, lng}}})
+  }
 
   @action handleWaypoint = (lat, lng, evt) => {
     if (evt && evt.target instanceof mapsjs.map.Marker) {
@@ -130,7 +154,25 @@ class Map extends Component {
         this.map.removeObject(evt.target)
       }
     } else {
-      const mapWaypoint = new H.map.Marker({lat:lat, lng:lng})
+      const svg = `<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+         viewBox="0 0 30 30" style="enable-background:new 0 0 30 30;" xml:space="preserve">
+      <g id="XMLID_2_">
+        <g>
+          <path style="fill:#0F86BD;" d="M15,28.9c-1.6-3-8-9.4-9.9-13.5c-0.6-1.3-1-2.7-1-4.2C4.2,5.7,9.1,1.1,15,1.1s10.9,4.6,10.9,10.1c0,1.5-0.4,2.9-1,4.2l0,0C23,19.5,16.6,25.9,15,28.9L15,28.9z"/>
+        </g>
+        <g>
+          <path style="fill:none;stroke:#87C2DE;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;" d="M5.1,15.4c-0.6-1.3-1-2.7-1-4.2C4.2,5.7,9.1,1.1,15,1.1s10.9,4.6,10.9,10.1c0,1.5-0.4,2.9-1,4.2"/>
+            <line style="fill:none;stroke:#87C2DE;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;" x1="15.1" y1="28.9" x2="15.1" y2="28.9"/>
+          <path style="fill:none;stroke:#87C2DE;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;" d="M5.1,15.4
+            c1.9,4.1,8.3,10.5,9.9,13.5"/>
+          <path style="fill:none;stroke:#87C2DE;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;" d="M24.9,15.4
+            c-1.9,4.1-8.3,10.5-9.9,13.5h0v0"/>
+        </g>
+      </g>
+      <text x="15" y="17" font-size="10pt" font-family="Arial" text-anchor="middle">${this.waypoints.length + 1}</text>
+    </svg>`
+      var icon = new H.map.Icon(svg, {size: {h:40,w:40}})
+      const mapWaypoint = new H.map.Marker({lat:lat, lng:lng}, {icon: icon})
       const wp = {lat:lat, lng:lng, id: this.map.addObject(mapWaypoint).getId()};
       this.waypoints.push(wp)
     }
@@ -140,7 +182,6 @@ class Map extends Component {
     const [ latitude, longitude ] = userLocation
     if (this.marker) {
       this.marker.setPosition({lat:latitude, lng:longitude})
-      this.map.setCenter({lat:latitude, lng:longitude})
     }
 
     return (
@@ -162,7 +203,7 @@ class Map extends Component {
               style={ { marginBottom: 10 } }
               className='fa fa-spin fa-2x fa-refresh' />
             <div>Loading user location & map...</div>
-          </div> : <div></div> }
+          </div> : <div/> }
 
         <div className='btn btn-drag-map'>
           { this.mapOptions.waypointMode ?
@@ -196,6 +237,9 @@ class Map extends Component {
         </div>
 
         { /* controls, settings displayed on top of the map */ }
+        <div className='algolia-places places'>
+          <input ref={ (ref) => { this.placesEl = ref } } type='search' placeholder='Destination' />
+        </div>
         <Coordinates />
         <SpeedCounter />
         <SpeedLimit />
